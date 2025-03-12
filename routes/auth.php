@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Laravel\Socialite\Facades\Socialite;
 use Livewire\Volt\Volt;
 
 Route::middleware('guest')->group(function () {
@@ -17,6 +20,29 @@ Route::middleware('guest')->group(function () {
     Volt::route('reset-password/{token}', 'auth.reset-password')
         ->name('password.reset');
 
+    Route::get('auth/google/redirect', function() {
+        return Socialite::driver('google')->redirect();
+    })->name('login.google');
+
+    Route::get('auth/google/callback', function() {
+        $googleUser = Socialite::driver('google')->user();
+
+        $user = User::updateOrCreate([
+            'google_id' => $googleUser->id,
+        ], [
+            'name' => $googleUser->name,
+            'email' => $googleUser->email,
+            'google_token' => $googleUser->token,
+            'google_refresh_token' => $googleUser->refreshToken,
+            'google_expires_in' => $googleUser->expiresIn,
+        ]);
+
+        Auth::login($user);
+
+        return redirect()->route('dashboard');
+
+    })->name('google.callback');
+    
 });
 
 Route::middleware('auth')->group(function () {
